@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # ----------------------------------------------------------------------
 # Numenta Platform for Intelligent Computing (NuPIC)
 # Copyright (C) 2014-2016, Numenta, Inc.  Unless you have an agreement
@@ -38,14 +37,13 @@ class ConnectionsTest(unittest.TestCase):
     connections = Connections(1024)
 
     segment1 = connections.createSegment(10)
-    self.assertEqual(segment1.idx, 0)
     self.assertEqual(segment1.cell, 10)
 
     segment2 = connections.createSegment(10)
-    self.assertEqual(segment2.idx, 1)
     self.assertEqual(segment2.cell, 10)
 
-    self.assertEqual(connections.segmentsForCell(10), [segment1, segment2])
+    self.assertEqual([segment1, segment2],
+                     list(connections.segmentsForCell(10)))
 
 
   def testCreateSegmentReuse(self):
@@ -55,17 +53,43 @@ class ConnectionsTest(unittest.TestCase):
     connections.createSynapse(segment1, 1, .5)
     connections.createSynapse(segment1, 2, .5)
 
-    connections.computeActivity([], .5, 2, .1, 1)
-    connections.computeActivity([], .5, 2, .1, 1)
-    connections.computeActivity([], .5, 2, .1, 1)
+    # Let some time pass.
+    connections.startNewIteration()
+    connections.startNewIteration()
+    connections.startNewIteration()
 
+    # Create a segment with 3 synapse.
     segment2 = connections.createSegment(42)
-    activeSegs, _ = connections.computeActivity([1, 2], .5, 2, .1, 1)
-    self.assertEqual(1, len(activeSegs))
-    self.assertEqual(segment1, activeSegs[0].segment)
+    connections.createSynapse(segment2, 1, .5)
+    connections.createSynapse(segment2, 2, .5)
+    connections.createSynapse(segment2, 3, .5)
+    connections.startNewIteration()
 
+    # Give the first segment some activity.
+    connections.recordSegmentActivity(segment1)
+
+    # Create a new segment with 1 synapse.
     segment3 = connections.createSegment(42)
-    self.assertEqual(segment2.idx, segment3.idx)
+    connections.createSynapse(segment3, 1, .5)
+
+    segments = connections.segmentsForCell(42)
+    self.assertEqual(2, len(segments))
+
+    # Verify first segment is still there with the same synapses.
+    self.assertEqual(set([1, 2]),
+                     set(synapse.presynapticCell for synapse in
+                         connections.synapsesForSegment(segments[0])))
+
+    # Verify second segment has been replaced.
+    self.assertEqual(set([1]),
+                     set(synapse.presynapticCell for synapse in
+                         connections.synapsesForSegment(segments[1])))
+
+    # Verify the flatIdxs were properly reused.
+    self.assertLess(segment1.flatIdx, 2)
+    self.assertLess(segment3.flatIdx, 2)
+    self.assertTrue(segment1 is connections.segmentForFlatIdx(segment1.flatIdx))
+    self.assertTrue(segment3 is connections.segmentForFlatIdx(segment3.flatIdx))
 
 
   def testSynapseReuse(self):
@@ -77,19 +101,20 @@ class ConnectionsTest(unittest.TestCase):
     segment = connections.createSegment(10)
 
     synapse1 = connections.createSynapse(segment, 50, .34)
-    synapse2 = connections.createSynapse(segment, 51, .34)
+    synapse2 = connections.createSynapse(segment, 51, .48)
 
     synapses = connections.synapsesForSegment(segment)
-    self.assertEqual(synapses, [synapse1, synapse2])
+    self.assertEqual(set([synapse1, synapse2]), synapses)
 
-    #Add an additional synapse to force it over the limit of num synapses
-    #per segment.
-    synapse3 = connections.createSynapse(segment, 52, .52)
-    self.assertEqual(0, synapse3.idx)
+    # Add an additional synapse to force it over the limit of num synapses
+    # per segment.
+    connections.createSynapse(segment, 52, .52)
 
-    #ensure lower permanence synapse was removed
-    synapses = connections.synapsesForSegment(segment)
-    self.assertEqual(synapses, [synapse3, synapse2])
+    # Ensure lower permanence synapse was removed.
+    self.assertEqual(set([51, 52]),
+                     set(synapse.presynapticCell
+                         for synapse in
+                         connections.synapsesForSegment(segment)))
 
 
   def testDestroySegment(self):
@@ -115,12 +140,11 @@ class ConnectionsTest(unittest.TestCase):
     self.assertEqual(3, connections.numSegments())
     self.assertEqual(0, connections.numSynapses())
 
-    args = [segment2]
-    self.assertRaises(ValueError, connections.synapsesForSegment, *args)
+    (numActiveConnected,
+     numActivePotential) = connections.computeActivity([80, 81, 82], 0.5)
 
-    active, matching = connections.computeActivity([80, 81, 82], .5, 2, .1, 1)
-    self.assertEqual(len(active), 0)
-    self.assertEqual(len(matching), 0)
+    self.assertEqual(0, numActiveConnected[segment2.flatIdx])
+    self.assertEqual(0, numActivePotential[segment2.flatIdx])
 
 
   def testDestroySynapse(self):
@@ -139,12 +163,13 @@ class ConnectionsTest(unittest.TestCase):
     connections.destroySynapse(synapse2)
 
     self.assertEqual(2, connections.numSynapses())
-    self.assertEqual(connections.synapsesForSegment(segment), [synapse1,
-                                                               synapse3])
-    active, matching = connections.computeActivity([80, 81, 82], .5, 2, 0.0, 1)
-    self.assertEqual(0, len(active))
-    self.assertEqual(1, len(matching))
-    self.assertEqual(2, matching[0].overlap)
+    self.assertEqual(set([synapse1, synapse3]),
+                     connections.synapsesForSegment(segment))
+    (numActiveConnected,
+     numActivePotential) = connections.computeActivity([80, 81, 82], .5)
+
+    self.assertEqual(1, numActiveConnected[segment.flatIdx])
+    self.assertEqual(2, numActivePotential[segment.flatIdx])
 
 
   def testPathsNotInvalidatedByOtherDestroys(self):
@@ -165,19 +190,19 @@ class ConnectionsTest(unittest.TestCase):
     synapse4 = connections.createSynapse(segment3, 204, .85)
     synapse5 = connections.createSynapse(segment3, 205, .85)
 
-    self.assertEqual(203, connections.dataForSynapse(synapse3).presynapticCell)
+    self.assertEqual(203, synapse3.presynapticCell)
     connections.destroySynapse(synapse1)
-    self.assertEqual(203, connections.dataForSynapse(synapse3).presynapticCell)
+    self.assertEqual(203, synapse3.presynapticCell)
     connections.destroySynapse(synapse5)
-    self.assertEqual(203, connections.dataForSynapse(synapse3).presynapticCell)
+    self.assertEqual(203, synapse3.presynapticCell)
 
     connections.destroySegment(segment1)
-    self.assertEqual(connections.synapsesForSegment(segment3),
-                     [synapse2, synapse3, synapse4])
+    self.assertEqual(set([synapse2, synapse3, synapse4]),
+                     connections.synapsesForSegment(segment3))
     connections.destroySegment(segment5)
-    self.assertEqual(connections.synapsesForSegment(segment3),
-                     [synapse2, synapse3, synapse4])
-    self.assertEqual(203, connections.dataForSynapse(synapse3).presynapticCell)
+    self.assertEqual(set([synapse2, synapse3, synapse4]),
+                     connections.synapsesForSegment(segment3))
+    self.assertEqual(203, synapse3.presynapticCell)
 
 
   def testDestroySegmentWithDestroyedSynapses(self):
@@ -249,7 +274,7 @@ class ConnectionsTest(unittest.TestCase):
     connections.createSegment(11)
     self.assertEqual(2, connections.numSegments())
     segment3 = connections.createSegment(11)
-    self.assertLess(segment3.idx, 2)
+    self.assertEqual(2, connections.numSegments(11))
     self.assertEqual(2, connections.numSegments())
 
 
@@ -274,7 +299,6 @@ class ConnectionsTest(unittest.TestCase):
     connections.createSynapse(segment, 202, .90)
     self.assertEqual(2, connections.numSynapses())
     synapse3 = connections.createSynapse(segment, 203, .8)
-    self.assertLess(synapse3.idx, 2)
     self.assertEqual(2, connections.numSynapses())
 
 
@@ -292,7 +316,6 @@ class ConnectionsTest(unittest.TestCase):
     connections.createSynapse(segment, 203, .8)
     self.assertEqual(2, connections.numSynapses())
     synapse = connections.createSynapse(segment, 204, .8)
-    self.assertLess(synapse.idx, 2)
     self.assertEqual(2, connections.numSynapses())
 
 
@@ -325,7 +348,7 @@ class ConnectionsTest(unittest.TestCase):
     connections.createSynapse(segment1a, 150, .85)
     connections.createSynapse(segment1a, 151, .15)
 
-    # Cell with 2 segment.
+    # Cell with 1 segment.
     # Segment with:
     # - 2 connected synapse: 2 active
     # - 3 matching synapses: 3 active
@@ -335,37 +358,15 @@ class ConnectionsTest(unittest.TestCase):
     synapse = connections.createSynapse(segment2a, 82, .85)
     connections.updateSynapsePermanence(synapse, .15)
 
-
-    # Segment with:
-    # - 2 connected synapses: 1 active, 1 inactive
-    # - 3 matching synapses: 2 active, 1 inactive
-    # - 1 non-matching synapse: 1 active
-    segment2b = connections.createSegment(20)
-    connections.createSynapse(segment2b, 50, .85)
-    connections.createSynapse(segment2b, 51, .85)
-    connections.createSynapse(segment2b, 52, .15)
-    connections.createSynapse(segment2b, 53, .05)
-
-    # Cell with one segment.
-    # Segment with:
-    # - 1 non-matching synapse: 1 active
-    segment3a = connections.createSegment(30)
-    connections.createSynapse(segment3a, 53, .05)
-
     inputVec = [50, 52, 53, 80, 81, 82, 150, 151]
-    active, matching = connections.computeActivity(inputVec, .5, 2, .1, 1)
+    (numActiveConnected,
+     numActivePotential) = connections.computeActivity(inputVec, .5)
 
-    self.assertEqual(1, len(active))
-    self.assertEqual(segment2a, active[0].segment)
-    self.assertEqual(2, active[0].overlap)
+    self.assertEqual(1, numActiveConnected[segment1a.flatIdx])
+    self.assertEqual(2, numActivePotential[segment1a.flatIdx])
 
-    self.assertEqual(3, len(matching))
-    self.assertEqual(segment1a, matching[0].segment)
-    self.assertEqual(2, matching[0].overlap)
-    self.assertEqual(segment2a, matching[1].segment)
-    self.assertEqual(3, matching[1].overlap)
-    self.assertEqual(segment2b, matching[2].segment)
-    self.assertEqual(2, matching[2].overlap)
+    self.assertEqual(2, numActiveConnected[segment2a.flatIdx])
+    self.assertEqual(3, numActivePotential[segment2a.flatIdx])
 
 
   @unittest.skipUnless(

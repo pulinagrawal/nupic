@@ -61,6 +61,7 @@ updateAnomalyLikelihoods. The details of these are described below.
 
 import collections
 import math
+import numbers
 import numpy
 
 from nupic.utils import MovingAverage
@@ -85,7 +86,7 @@ class AnomalyLikelihood(object):
     claLearningPeriod and learningPeriod are specifying the same variable,
     although claLearningPeriod is a deprecated name for it.
 
-    @param learningPeriod (claLeraningPeriod: deprecated) - (int) the number of
+    @param learningPeriod (claLearningPeriod: deprecated) - (int) the number of
       iterations required for the algorithm to learn the basic patterns in the
       dataset and for the anomaly score to 'settle down'. The default is based
       on empirical observations but in reality this could be larger for more
@@ -118,7 +119,7 @@ class AnomalyLikelihood(object):
 
 
     if claLearningPeriod != None:
-      print "claLearningPeriod is deprecated, use learningPeriod instead."
+      print("claLearningPeriod is deprecated, use learningPeriod instead.")
       self._learningPeriod = claLearningPeriod
     else:
       self._learningPeriod = learningPeriod
@@ -440,10 +441,10 @@ def estimateAnomalyLikelihoods(anomalyScores,
 
   """
   if verbosity > 1:
-    print "In estimateAnomalyLikelihoods."
-    print "Number of anomaly scores:", len(anomalyScores)
-    print "Skip records=", skipRecords
-    print "First 20:", anomalyScores[0:min(20, len(anomalyScores))]
+    print("In estimateAnomalyLikelihoods.")
+    print("Number of anomaly scores:", len(anomalyScores))
+    print("Skip records=", skipRecords)
+    print("First 20:", anomalyScores[0:min(20, len(anomalyScores))])
 
   if len(anomalyScores) == 0:
     raise ValueError("Must have at least one anomalyScore")
@@ -468,17 +469,19 @@ def estimateAnomalyLikelihoods(anomalyScores,
     # detect and handle completely flat metric values by reporting them as not
     # anomalous.
     s = [r[1] for r in aggRecordList]
-    metricValues = numpy.array(s)
-    metricDistribution = estimateNormal(metricValues[skipRecords:],
-                                        performLowerBoundCheck=False)
+    # Only do this if the values are numeric
+    if all([isinstance(r[1], numbers.Number) for r in aggRecordList]):
+      metricValues = numpy.array(s)
+      metricDistribution = estimateNormal(metricValues[skipRecords:],
+                                          performLowerBoundCheck=False)
 
-    if metricDistribution["variance"] < 1.5e-5:
-      distributionParams = nullDistribution(verbosity = verbosity)
+      if metricDistribution["variance"] < 1.5e-5:
+        distributionParams = nullDistribution(verbosity = verbosity)
 
   # Estimate likelihoods based on this distribution
   likelihoods = numpy.array(dataValues, dtype=float)
   for i, s in enumerate(dataValues):
-    likelihoods[i] = normalProbability(s, distributionParams)
+    likelihoods[i] = tailProbability(s, distributionParams)
 
   # Filter likelihood values
   filteredLikelihoods = numpy.array(
@@ -496,12 +499,12 @@ def estimateAnomalyLikelihoods(anomalyScores,
   }
 
   if verbosity > 1:
-    print "Discovered params="
-    print params
-    print "Number of likelihoods:", len(likelihoods)
-    print "First 20 likelihoods:", (
-      filteredLikelihoods[0:min(20, len(filteredLikelihoods))] )
-    print "leaving estimateAnomalyLikelihoods"
+    print("Discovered params=")
+    print(params)
+    print("Number of likelihoods:", len(likelihoods))
+    print("First 20 likelihoods:", (
+      filteredLikelihoods[0:min(20, len(filteredLikelihoods))] ))
+    print("leaving estimateAnomalyLikelihoods")
 
 
   return (filteredLikelihoods, aggRecordList, params)
@@ -541,10 +544,10 @@ def updateAnomalyLikelihoods(anomalyScores,
 
   """
   if verbosity > 3:
-    print "In updateAnomalyLikelihoods."
-    print "Number of anomaly scores:", len(anomalyScores)
-    print "First 20:", anomalyScores[0:min(20, len(anomalyScores))]
-    print "Params:", params
+    print("In updateAnomalyLikelihoods.")
+    print("Number of anomaly scores:", len(anomalyScores))
+    print("First 20:", anomalyScores[0:min(20, len(anomalyScores))])
+    print("Params:", params)
 
   if len(anomalyScores) == 0:
     raise ValueError("Must have at least one anomalyScore")
@@ -553,7 +556,7 @@ def updateAnomalyLikelihoods(anomalyScores,
     raise ValueError("'params' is not a valid params structure")
 
   # For backward compatibility.
-  if not params.has_key("historicalLikelihoods"):
+  if "historicalLikelihoods" not in params:
     params["historicalLikelihoods"] = [1.0]
 
   # Compute moving averages of these new scores using the previous values
@@ -569,7 +572,7 @@ def updateAnomalyLikelihoods(anomalyScores,
       MovingAverage.compute(historicalValues, total, v[2], windowSize)
     )
     aggRecordList[i] = newAverage
-    likelihoods[i]   = normalProbability(newAverage, params["distribution"])
+    likelihoods[i]   = tailProbability(newAverage, params["distribution"])
 
   # Filter the likelihood values. First we prepend the historical likelihoods
   # to the current set. Then we filter the values.  We peel off the likelihoods
@@ -593,9 +596,9 @@ def updateAnomalyLikelihoods(anomalyScores,
   assert len(newParams["historicalLikelihoods"]) <= windowSize
 
   if verbosity > 3:
-    print "Number of likelihoods:", len(likelihoods)
-    print "First 20 likelihoods:", likelihoods[0:min(20, len(likelihoods))]
-    print "Leaving updateAnomalyLikelihoods."
+    print("Number of likelihoods:", len(likelihoods))
+    print("First 20 likelihoods:", likelihoods[0:min(20, len(likelihoods))])
+    print("Leaving updateAnomalyLikelihoods.")
 
   return (likelihoods, aggRecordList, newParams)
 
@@ -658,7 +661,7 @@ def _anomalyScoreMovingAverage(anomalyScores,
     # Skip (but log) records without correct number of entries
     if not isinstance(record, (list, tuple)) or len(record) != 3:
       if verbosity >= 1:
-        print "Malformed record:", record
+        print("Malformed record:", record)
       continue
 
     avg, historicalValues, total = (
@@ -668,8 +671,8 @@ def _anomalyScoreMovingAverage(anomalyScores,
     averagedRecordList.append( [record[0], record[1], avg] )
 
     if verbosity > 2:
-      print "Aggregating input record:", record
-      print "Result:", [record[0], record[1], avg]
+      print("Aggregating input record:", record)
+      print("Result:", [record[0], record[1], avg])
 
   return averagedRecordList, historicalValues, total
 
@@ -719,7 +722,7 @@ def nullDistribution(verbosity=0):
       between 0 and 1 pretty likely.
   """
   if verbosity>0:
-    print "Returning nullDistribution"
+    print("Returning nullDistribution")
   return {
     "name": "normal",
     "mean": 0.5,
@@ -729,11 +732,13 @@ def nullDistribution(verbosity=0):
 
 
 
-def normalProbability(x, distributionParams):
+def tailProbability(x, distributionParams):
   """
-  Given the normal distribution specified by the mean and standard deviation in
-  distributionParams, return the probability of getting samples > x.
-  This is the Q-function: the tail probability of the normal distribution.
+  Given the normal distribution specified by the mean and standard deviation
+  in distributionParams, return the probability of getting samples further
+  from the mean. For values above the mean, this is the probability of getting
+  samples > x and for values below the mean, the probability of getting
+  samples < x. This is the Q-function: the tail probability of the normal distribution.
 
   :param distributionParams: dict with 'mean' and 'stdev' of the distribution
   """
@@ -743,7 +748,7 @@ def normalProbability(x, distributionParams):
   if x < distributionParams["mean"]:
     # Gaussian is symmetrical around mean, so flip to get the tail probability
     xp = 2 * distributionParams["mean"] - x
-    return 1.0 - normalProbability(xp, distributionParams)
+    return tailProbability(xp, distributionParams)
 
   # Calculate the Q function with the complementary error function, explained
   # here: http://www.gaussianwaves.com/2012/07/q-function-and-error-functions
@@ -760,13 +765,13 @@ def isValidEstimatorParams(p):
   """
   if not isinstance(p, dict):
     return False
-  if not p.has_key("distribution"):
+  if "distribution" not in p:
     return False
-  if not p.has_key("movingAverage"):
+  if "movingAverage" not in p:
     return False
   dist = p["distribution"]
-  if not (dist.has_key("mean") and dist.has_key("name")
-          and dist.has_key("variance") and dist.has_key("stdev")):
+  if not ("mean" in dist and "name" in dist
+          and "variance" in dist and "stdev" in dist):
     return False
 
   return True

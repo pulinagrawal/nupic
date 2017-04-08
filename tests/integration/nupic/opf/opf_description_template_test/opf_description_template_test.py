@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # ----------------------------------------------------------------------
 # Numenta Platform for Intelligent Computing (NuPIC)
 # Copyright (C) 2014, Numenta, Inc.  Unless you have an agreement
@@ -221,7 +220,7 @@ class PositiveTests(MyTestCaseBase):
     modelDesc = expIface.getModelDescription()
 
     tpActivationThreshold = modelDesc['modelParams'] \
-        ['tpParams']['activationThreshold']
+        ['tmParams']['activationThreshold']
 
     expectedValue = 12
     self.assertEqual(tpActivationThreshold, expectedValue,

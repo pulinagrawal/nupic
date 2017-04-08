@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # ----------------------------------------------------------------------
 # Numenta Platform for Intelligent Computing (NuPIC)
 # Copyright (C) 2013, Numenta, Inc.  Unless you have an agreement
@@ -96,8 +95,8 @@ MODEL_PARAMS = {
         "synPermInactiveDec": 0.01,
     },
 
-    "tpEnable" : True,
-    "tpParams": {
+    "tmEnable" : True,
+    "tmParams": {
       "verbosity": 0,
         "columnCount": 2048,
         "cellsPerColumn": 32,

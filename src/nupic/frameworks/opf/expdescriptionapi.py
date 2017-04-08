@@ -277,12 +277,13 @@ class ExperimentDescriptionAPI(DescriptionIface):
       synPermConnected = config.get('spSynPermConnected', 0.1),
       synPermActiveInc = config.get('synPermActiveInc', 0.1),
       synPermInactiveDec = config.get('synPermInactiveDec', 0.01),
+      boostStrength = config.get('boostStrength', 1.0),
     )
 
-    tpParams = dict(
+    tmParams = dict(
       verbosity = config['tpVerbosity'],
       columnCount = config['claRegionNColumns'],
-      cellsPerColumn = config['tpNCellsPerCol'] if config['tpEnable']  else 1,
+      cellsPerColumn = config['tpNCellsPerCol'] if config['tmEnable']  else 1,
       inputWidth   = spParams['columnCount'],
       seed = 1960,
       temporalImp = config['tpImplementation'],
@@ -350,8 +351,8 @@ class ExperimentDescriptionAPI(DescriptionIface):
            sensorParams   = sensorParams,
            spEnable       = config.get('spEnable', True),
            spParams       = spParams,
-           tpEnable       = config['tpEnable'],
-           tpParams       = tpParams,
+           tmEnable       = config['tmEnable'],
+           tmParams       = tmParams,
            clParams       = clParams,
            trainSPNetOnlyIfRequested = config.get(
                                       'claTrainSPNetOnlyIfRequested', False),

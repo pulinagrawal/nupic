@@ -104,7 +104,7 @@ config = {
         'spEnable': $SP_ENABLE,
 
         'spParams': {
-            # Spatial pooler implementation to use. 
+            # Spatial pooler implementation to use.
             # Options: "py" (slow, good for debugging), and "cpp" (optimized).
             'spatialImp': 'cpp',
 
@@ -130,7 +130,7 @@ config = {
 
             # potentialPct
             # What percent of the columns's receptive field is available
-            # for potential synapses. 
+            # for potential synapses.
             'potentialPct': $SP_POOL_PCT,
 
             # The default connected threshold. Any synapse whose
@@ -147,17 +147,18 @@ config = {
             'synPermActiveInc': 0.05,
 
             'synPermInactiveDec': 0.0005,
-            
-            'maxBoost': 1.0
+
+            # The default boosting strength is set to 0 (no boosting)
+            'boostStrength': 0.0
         },
 
         # Controls whether TP is enabled or disabled;
         # TP is necessary for making temporal predictions, such as predicting
         # the next inputs.  Without TP, the model is only capable of
         # reconstructing missing sensor inputs (via SP).
-        'tpEnable' : $TP_ENABLE,
+        'tmEnable' : $TP_ENABLE,
 
-        'tpParams': {
+        'tmParams': {
             # TP diagnostic output verbosity control;
             # 0: silent; [1..6]: increasing levels of verbosity
             # (see verbosity in nupic/trunk/py/nupic/research/TP.py and TP10X*.py)
@@ -228,7 +229,7 @@ config = {
 
         'clParams': {
             'regionName' : 'SDRClassifierRegion',
-            
+
             # Classifier diagnostic output verbosity control;
             # 0: silent; [1..6]: increasing levels of verbosity
             'verbosity' : 0,

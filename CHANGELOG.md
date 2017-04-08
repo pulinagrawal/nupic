@@ -1,5 +1,91 @@
 # Changelog
 
+## 0.6.0
+
+* Touch init even if model params dir exists
+* Auto-add __init__.py when model parms created
+* Shift code from otherwise unused `nupic.engine.common_networks` to example where it's used.  Includes bugfix renaming `rawAnomalyScore` to `anomalyScore`
+* Explicitly import and use `engine_internal` in lieu of `engine` to avoid confusion, create `nupic.engine.OS` and `nupic.engine.Timer` by assignment rather than subclass
+* Change SparsePassThroughEncoder dtype error to ValueError
+* Fix for an unrelated change that resulted in numpy arrays being used in cpp implementation
+* Give better message for bad dtype to SparsePassThroughEncoder
+* Add test for passing float values for radius
+* Adds api docs for coordinate encoders
+* Cleanup CoordinateEncoder
+* Remove svm, cells4 tests that are moved to nupic.core.
+* Added missing anomaly stuff, fixed requirements
+* Moved sphinx deps out of requirements.txt
+* Fix hotgym_regression_test.py to make it work with nupic.core PR 1236.
+* Skip test when capnp is not available, such as windows as well as address feedback from Scott
+* Serialization base python class analagous to nupic.core Serializable c++ class
+* Adds a demo Jupyter notebook, useful for demonstrating usage of visualization framework and as an entrypoint for tinkering with different network topologies
+* Speed up SpatialPooler read method.
+* Rename normalProbability to tailProbability.
+* Use IterableCollection from engine_internal
+* Call Region.purgeInputLinkBufferHeads after compute() calls in CLAModel to integrate with the new delayed link implementation from nupic.core.
+* rename maxBoost to boostStrength in hotgym example
+* Disable backward compatibility serialization test
+* remove minPctActiveDutyCycle parameter form SP compatability test
+* update expected result in hotgym, result change due to different rounding rules in boosting
+* eliminate minPctActiveDutyCycle from spatial pooler
+* Rename maxBoost to BoostStrength
+* Stop changing the overlaps to do tie-breaking
+* Stop trying to get identical boost factors between py and cpp
+* set maxBoost in expdescriptionapi
+* update sp_overlap_test to use global inhibition
+* slight simplification of boostFactor calculation
+* Implement update boost factors local and global
+* Avoid floating point differences with C++ SpatialPooler
+* run C++ SP in spatial_pooler_boost_tests
+* update spatial pooler boost test
+* update boosting rules for spatial pooler
+* fix bug in setPotential
+* modified SP boosting rule
+
+## 0.5.7
+
+* Remove tests moved to nupic.core and update version to latest bindings release.
+* Update hello_tm.py
+* Removed linux and gcc from Travis build matrix
+* Makes `anomaly_likelihood.py` compliant to Python3
+* Update env vars and paths to simplify the AV configuration and installation.
+* Cleanup references to nupic.bindings and old CI code for manually fetching nupic.bindings since it should be found on PyPI without doing anything special.
+
+## 0.5.6
+
+* Since manylinux nupic.bindings wheel 0.4.10 has now been released to PyPi, we no longer need to install nupic.bindings from S3.
+* fix logic in _getColumnNeighborhood
+* Bugfix in flatIdx reuse after a segment is destroyed
+* Change private _burstColumn class method signature to accept a cellsForColumn argument in lieu of a cellsPerColumn argument.  Move the calculation that otherwise depends on cellsPerColumn into the instance method.
+* TM: Support extensibility by using traditional methods
+* Update expected error for topology changes
+* Update expected hotgym result for topology changes
+* Adds RELEASE.md with documentation for releasing NuPIC.
+* Match nupic.core's SP neighborhood ordering.
+* Update inhibition comments and docstrings.
+* Introduce mechanism by which already-installed pre-release versions of nupic.bindings are ignored during installation
+* Assign self.connections value from self.connectionsFactory() rather than direct usage of Connections constructor. Allows better extensibility should the user want to change some aspect of the creation of the connections instance in a subclass
+* Removed obsolete directory src/nupic/bindings/
+* Remove the notion of "destroyed" Segments / Synapses
+* Enable proper subclassing by converting staticmethods that referenced `TemporalMemory` to classmethods that reference their class.
+* Fixup TemporalMemory.write() to handle columnDimensions as tuples.
+* Initialize columnDimensions as a tuple in test to reflect common convention.  This forces the TemporalMemoryTest.testWriteRead test to fail in its current state.
+* Store "numActivePotentialSynapses". No more "SegmentOverlap".
+* Add a lot more scenarios to the TM perf benchmark
+* Moved audiostream example to htm-community
+* Safer "addToWinners" value. Play nicely with surgical boosting.
+* Bugfix: With no stimulus threshold, still break ties when overlaps=0
+* Clean up trailing whitespace and tabs
+* Properly apply the stimulus threshold
+* Add test for new "learn on predicted segments" behavior
+* Split compute into activateCells and activateDendrites
+* Grow synapses in predicted columns, not just bursting columns
+* Removed bundled get-pip.py and instead fetch version copy from S3
+* Removed .nupic_modules and now rely on versioned release of nupic.bindings on PyPI
+* averagingWindow size updated to improve HTM scores for RES-296
+* Build system updates for Bamboo (Linux), Travis (OS X), and AppVeyor (Windows)
+* Added nyc taxi example for anomaly detection
+
 ## 0.5.5
 
 * Renamed a misclassed class name from ConnectionsTest to GroupByTest

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # ----------------------------------------------------------------------
 # Numenta Platform for Intelligent Computing (NuPIC)
 # Copyright (C) 2014, Numenta, Inc.  Unless you have an agreement
@@ -547,7 +546,7 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
         },
       ],
     }
-    
+
     # Make sure we have the right metric type
     #   (avg_err for categories, aae for scalars)
     (base, perms) = self.getModules(expDesc)
@@ -1018,7 +1017,7 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
 
     # --------------------------------------------------------------------
     (base, perms) = self.getModules(expDesc)
-    
+
     print "base.config['modelParams']:"
     pprint.pprint(base.config['modelParams'])
     print "perms.permutations"
@@ -1035,7 +1034,7 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
                      expDesc['inferenceArgs']['predictedField'])
     self.assertEqual(base.config['modelParams']['inferenceType'],
                      "TemporalMultiStep")
-    
+
     # Make sure there is a '_classifier_input' encoder with classifierOnly
     #  set to True
     self.assertEqual(base.config['modelParams']['sensorParams']['encoders']
@@ -1043,7 +1042,7 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
     self.assertEqual(base.config['modelParams']['sensorParams']['encoders']
                      ['_classifierInput']['fieldname'],
                      expDesc['inferenceArgs']['predictedField'])
-    
+
 
     # And in the permutations file
     self.assertIn('inferenceType', perms.permutations['modelParams'])
@@ -1058,12 +1057,12 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
 
     # Should set inputPredictedField to "auto" (the default)
     self.assertEqual(perms.inputPredictedField, "auto")
-    
+
 
     # Should have TP parameters being permuted
     self.assertIn('activationThreshold',
-                  perms.permutations['modelParams']['tpParams'])
-    self.assertIn('minThreshold', perms.permutations['modelParams']['tpParams'])
+                  perms.permutations['modelParams']['tmParams'])
+    self.assertIn('minThreshold', perms.permutations['modelParams']['tmParams'])
 
 
     # Make sure the right metrics were put in
@@ -1106,9 +1105,9 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
     self.assertIn('alpha', perms.permutations['modelParams']['clParams'])
     self.assertNotIn('inferenceType', perms.permutations['modelParams'])
     self.assertNotIn('activationThreshold',
-                     perms.permutations['modelParams']['tpParams'])
+                     perms.permutations['modelParams']['tmParams'])
     self.assertNotIn('minThreshold',
-                     perms.permutations['modelParams']['tpParams'])
+                     perms.permutations['modelParams']['tmParams'])
 
     # Make sure the right metrics were put in
     metrics = base.control['metrics']
@@ -1141,8 +1140,8 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
     self.assertIn('alpha', perms.permutations['modelParams']['clParams'])
     self.assertIn('inferenceType', perms.permutations['modelParams'])
     self.assertIn('activationThreshold',
-                  perms.permutations['modelParams']['tpParams'])
-    self.assertIn('minThreshold', perms.permutations['modelParams']['tpParams'])
+                  perms.permutations['modelParams']['tmParams'])
+    self.assertIn('minThreshold', perms.permutations['modelParams']['tmParams'])
 
     # Make sure the right metrics were put in
     metrics = base.control['metrics']
@@ -1156,8 +1155,8 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
 
     # Test running it
     self.runBaseDescriptionAndPermutations(expDesc, hsVersion='v2')
-    
-    
+
+
     # ---------------------------------------------------------------------
     # If the caller sets inferenceArgs.inputPredictedField, make
     # sure the permutations file has the same setting
@@ -1471,7 +1470,7 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
 
     # Should set inputPredictedField to "auto"
     self.assertEqual(perms.inputPredictedField, "auto")
-    
+
 
 
     # --------------------------------------------------------------------
@@ -1791,14 +1790,14 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
     self.assertEqual(base.config['modelParams']['sensorParams']['encoders']
                      ['_classifierInput']['fieldname'],
                      expDesc['inferenceArgs']['predictedField'])
-    
+
     self.assertNotIn('consumption',
              base.config['modelParams']['sensorParams']['encoders'].keys())
 
-    
+
     # The SP and TP should both be disabled
     self.assertFalse(base.config['modelParams']['spEnable'])
-    self.assertFalse(base.config['modelParams']['tpEnable'])
+    self.assertFalse(base.config['modelParams']['tmEnable'])
 
     # Check permutations file
     self.assertNotIn('inferenceType', perms.permutations['modelParams'])
@@ -1808,7 +1807,7 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
     self.assertIn('alpha', perms.permutations['modelParams']['clParams'])
 
     # Should have no SP or TP params to permute over
-    self.assertEqual(perms.permutations['modelParams']['tpParams'], {})
+    self.assertEqual(perms.permutations['modelParams']['tmParams'], {})
     self.assertEqual(perms.permutations['modelParams']['spParams'], {})
 
 
@@ -1847,8 +1846,8 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
     except:
       gotException = True
     self.assertTrue(gotException)
-    
-    
+
+
     # --------------------------------------
     # If we specify NonTemporalClassification, inferenceArgs.inputPredictedField
     #  can not be 'yes'
@@ -1860,7 +1859,7 @@ class PositiveExperimentTests(ExperimentTestBaseClass):
     except:
       gotException = True
     self.assertTrue(gotException)
-    
+
 
     return
 

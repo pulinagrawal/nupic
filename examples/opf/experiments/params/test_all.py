@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # ----------------------------------------------------------------------
 # Numenta Platform for Intelligent Computing (NuPIC)
 # Copyright (C) 2013, Numenta, Inc.  Unless you have an agreement
@@ -53,8 +52,8 @@ def testAll(experiments):
 
     datasetPath = datasetURI[len("file://"):]
     for i in xrange(1024, 2176, 128):
-      #config['modelParams']['tpParams']['cellsPerColumn'] = 16
-      config['modelParams']['tpParams']['columnCount'] = i
+      #config['modelParams']['tmParams']['cellsPerColumn'] = 16
+      config['modelParams']['tmParams']['columnCount'] = i
       config['modelParams']['spParams']['columnCount'] = i
       print 'Running with 32 cells per column and %i columns.' % i
       start = time.time()

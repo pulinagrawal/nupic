@@ -123,8 +123,8 @@ class CLAModel(Model):
 
       # TODO: We can't figure out what this is. Remove?
       trainSPNetOnlyIfRequested=False,
-      tpEnable=True,
-      tpParams={},
+      tmEnable=True,
+      tmParams={},
       clEnable=True,
       clParams={},
       anomalyParams={},
@@ -142,8 +142,8 @@ class CLAModel(Model):
           are passed to the spatial pooler.
       trainSPNetOnlyIfRequested: If set, don't create an SP network unless the
           user requests SP metrics.
-      tpEnable: Whether to use a temporal pooler.
-      tpParams: A dictionary specifying the temporal pooler parameters. These
+      tmEnable: Whether to use a temporal pooler.
+      tmParams: A dictionary specifying the temporal pooler parameters. These
           are passed to the temporal pooler.
       clEnable: Whether to use the classifier. If false, the classifier will
           not be created and no predictions will be generated.
@@ -179,16 +179,16 @@ class CLAModel(Model):
     # set up learning parameters (note: these may be replaced via
     # enable/disable//SP/TP//Learning methods)
     self.__spLearningEnabled = bool(spEnable)
-    self.__tpLearningEnabled = bool(tpEnable)
+    self.__tpLearningEnabled = bool(tmEnable)
 
     # Explicitly exclude the TP if this type of inference doesn't require it
     if not InferenceType.isTemporal(self.getInferenceType()) \
        or self.getInferenceType() == InferenceType.NontemporalMultiStep:
-      tpEnable = False
+      tmEnable = False
 
     self._netInfo = None
     self._hasSP = spEnable
-    self._hasTP = tpEnable
+    self._hasTP = tmEnable
     self._hasCL = clEnable
 
     self._classifierInputEncoder = None
@@ -203,7 +203,7 @@ class CLAModel(Model):
     else:
       # Create the network
       self._netInfo = self.__createCLANetwork(
-          sensorParams, spEnable, spParams, tpEnable, tpParams, clEnable,
+          sensorParams, spEnable, spParams, tmEnable, tmParams, clEnable,
           clParams, anomalyParams)
 
 
@@ -456,7 +456,7 @@ class CLAModel(Model):
     """
     absoluteValue = None
     bucketIdx = None
-    
+
     if self._predictedFieldName is not None and self._classifierInputEncoder is not None:
       absoluteValue = inputRecord[self._predictedFieldName]
       bucketIdx = self._classifierInputEncoder.getBucketIndices(absoluteValue)[0]
@@ -486,6 +486,7 @@ class CLAModel(Model):
     sp.setParameter('learningMode', self.isLearningEnabled())
     sp.prepareInputs()
     sp.compute()
+
 
 
   def _tpCompute(self):
@@ -636,7 +637,7 @@ class CLAModel(Model):
 
       if not self._predictedFieldName in self._input:
         raise ValueError(
-          "Expected predicted field '%s' in input row, but was not found!" 
+          "Expected predicted field '%s' in input row, but was not found!"
           % self._predictedFieldName
         )
       # Calculate the anomaly score using the active columns
@@ -652,6 +653,7 @@ class CLAModel(Model):
             "activeColumnCount", len(activeColumns))
         self._getAnomalyClassifier().prepareInputs()
         self._getAnomalyClassifier().compute()
+
         labels = self._getAnomalyClassifier().getSelf().getLabelResults()
         inferences[InferenceElement.anomalyLabel] = "%s" % labels
 
@@ -1054,8 +1056,8 @@ class CLAModel(Model):
     return self._getSensorRegion().getSelf().dataSource
 
 
-  def __createCLANetwork(self, sensorParams, spEnable, spParams, tpEnable,
-                         tpParams, clEnable, clParams, anomalyParams):
+  def __createCLANetwork(self, sensorParams, spEnable, spParams, tmEnable,
+                         tmParams, clEnable, clParams, anomalyParams):
     """ Create a CLA network and return it.
 
     description:  CLA Model description dictionary (TODO: define schema)
@@ -1120,16 +1122,16 @@ class CLAModel(Model):
       prevRegion = "SP"
       prevRegionWidth = spParams['columnCount']
 
-    if tpEnable:
-      tpParams = tpParams.copy()
+    if tmEnable:
+      tmParams = tmParams.copy()
       if prevRegion == 'sensor':
-        tpParams['inputWidth'] = tpParams['columnCount'] = prevRegionWidth
+        tmParams['inputWidth'] = tmParams['columnCount'] = prevRegionWidth
       else:
-        assert tpParams['columnCount'] == prevRegionWidth
-        tpParams['inputWidth'] = tpParams['columnCount']
+        assert tmParams['columnCount'] == prevRegionWidth
+        tmParams['inputWidth'] = tmParams['columnCount']
 
-      self.__logger.debug("Adding TPRegion; tpParams: %r" % tpParams)
-      n.addRegion("TP", "py.TPRegion", json.dumps(tpParams))
+      self.__logger.debug("Adding TPRegion; tmParams: %r" % tmParams)
+      n.addRegion("TP", "py.TPRegion", json.dumps(tmParams))
 
       # Link TP region
       n.link(prevRegion, "TP", "UniformLink", "")
@@ -1143,7 +1145,7 @@ class CLAModel(Model):
          destInput="resetIn")
 
       prevRegion = "TP"
-      prevRegionWidth = tpParams['inputWidth']
+      prevRegionWidth = tmParams['inputWidth']
 
     if clEnable and clParams is not None:
       clParams = clParams.copy()
@@ -1162,7 +1164,7 @@ class CLAModel(Model):
           trainRecords=anomalyParams.get('autoDetectWaitRecords', None),
           cacheSize=anomalyParams.get('anomalyCacheRecords', None)
       )
-      self._addAnomalyClassifierRegion(n, anomalyClParams, spEnable, tpEnable)
+      self._addAnomalyClassifierRegion(n, anomalyClParams, spEnable, tmEnable)
 
     #--------------------------------------------------
     # NuPIC doesn't initialize the network until you try to run it
@@ -1301,11 +1303,11 @@ class CLAModel(Model):
 
     network = Network.read(proto.network)
     spEnable = ("SP" in network.regions)
-    tpEnable = ("TP" in network.regions)
+    tmEnable = ("TP" in network.regions)
     clEnable = ("Classifier" in network.regions)
 
     model = cls(spEnable=spEnable,
-                tpEnable=tpEnable,
+                tmEnable=tmEnable,
                 clEnable=clEnable,
                 inferenceType=inferenceType,
                 network=network)
@@ -1393,14 +1395,14 @@ class CLAModel(Model):
         )
 
         spEnable = (self._getSPRegion() is not None)
-        tpEnable = True
+        tmEnable = True
 
         # Store original KNN region
         knnRegion = self._getAnomalyClassifier().getSelf()
 
         # Add new KNNAnomalyClassifierRegion
         self._addAnomalyClassifierRegion(self._netInfo.net, anomalyClParams,
-                                         spEnable, tpEnable)
+                                         spEnable, tmEnable)
 
         # Restore state
         self._getAnomalyClassifier().getSelf()._iteration = self.__numRunCalls
@@ -1427,7 +1429,7 @@ class CLAModel(Model):
     return
 
 
-  def _addAnomalyClassifierRegion(self, network, params, spEnable, tpEnable):
+  def _addAnomalyClassifierRegion(self, network, params, spEnable, tmEnable):
     """
     Attaches an 'AnomalyClassifier' region to the network. Will remove current
     'AnomalyClassifier' region if it exists.
@@ -1437,7 +1439,7 @@ class CLAModel(Model):
     network - network to add the AnomalyClassifier region
     params - parameters to pass to the region
     spEnable - True if network has an SP region
-    tpEnable - True if network has a TP region; Currently requires True
+    tmEnable - True if network has a TP region; Currently requires True
     """
 
     allParams = copy.deepcopy(params)
@@ -1474,7 +1476,7 @@ class CLAModel(Model):
           srcOutput="dataOut", destInput="spBottomUpOut")
 
     # Attach link to TP
-    if tpEnable:
+    if tmEnable:
       network.link("TP", "AnomalyClassifier", "UniformLink", "",
               srcOutput="topDownOut", destInput="tpTopDownOut")
       network.link("TP", "AnomalyClassifier", "UniformLink", "",

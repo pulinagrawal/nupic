@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # ----------------------------------------------------------------------
 # Numenta Platform for Intelligent Computing (NuPIC)
 # Copyright (C) 2013, Numenta, Inc.  Unless you have an agreement
@@ -122,7 +121,7 @@ class CLAModelTest(unittest.TestCase):
                                       u'columnCount': 2048,
                                       u'globalInhibition': 1,
                                       u'inputWidth': 0,
-                                      u'maxBoost': 1.0,
+                                      u'boostStrength': 0.0,
                                       u'numActiveColumnsPerInhArea': 40,
                                       u'seed': 1956,
                                       u'spVerbosity': 0,
@@ -131,8 +130,8 @@ class CLAModelTest(unittest.TestCase):
                                       u'synPermConnected': 0.1,
                                       u'synPermInactiveDec': 0.0005,
                                       },
-                        u'tpEnable': True,
-                        u'tpParams': {u'activationThreshold': 13,
+                        u'tmEnable': True,
+                        u'tmParams': {u'activationThreshold': 13,
                                       u'cellsPerColumn': 32,
                                       u'columnCount': 2048,
                                       u'globalDecay': 0.0,
